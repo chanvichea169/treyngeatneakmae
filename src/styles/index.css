@@ -1,0 +1,27 @@
+@import "@fontsource/noto-sans-khmer";
+@import "@fontsource-variable/inter";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased font-['Inter_Variable'] bg-[#F7F9F7] text-[#1e293b] selection:bg-emerald-100 selection:text-emerald-900;
+  }
+  
+  .khmer-font {
+    font-family: 'Noto Sans Khmer', sans-serif;
+    @apply leading-relaxed;
+  }
+}
+
+@layer utilities {
+  .shadow-card {
+    @apply shadow-[0_10px_40px_-15px_rgba(0,0,0,0.08)];
+  }
+  
+  .shadow-card-hover {
+    @apply hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.12)];
+  }
+}
