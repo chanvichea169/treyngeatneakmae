@@ -1,4 +1,5 @@
 import { cn } from "../utils/cn";
+import logo from "../assets/logo.png";
 
 interface HeaderProps {
   title: string;
@@ -12,8 +13,8 @@ const Header = ({ title, subtitle, lang, setLang }: HeaderProps) => {
     <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-emerald-50">
       <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-100">
-            {title[0]}
+          <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg shadow-emerald-100/50 border border-emerald-50">
+            <img src={logo} alt={title} className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className={cn(
