@@ -42,7 +42,7 @@ const ProductCard = ({ product, lang }: ProductCardProps) => {
             {product.name[lang]}
           </h2>
           <span className="text-2xl font-black text-emerald-600">
-            ${product.price}
+            ${product.price}/kg
           </span>
         </div>
         

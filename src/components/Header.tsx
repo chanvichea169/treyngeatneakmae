@@ -32,11 +32,11 @@ const Header = ({ title, subtitle, lang, setLang }: HeaderProps) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-emerald-50 p-1 rounded-full border border-emerald-100">
+        <div className="flex items-center gap-1.5 bg-emerald-50 p-1.5 rounded-full border border-emerald-100">
           <button
             onClick={() => setLang("en")}
             className={cn(
-              "px-4 py-1.5 text-[10px] font-bold transition-all rounded-full",
+              "px-5 py-2.5 text-sm font-bold transition-all rounded-full",
               lang === "en" ? "bg-white text-emerald-600 shadow-sm" : "text-emerald-900/40 hover:text-emerald-900/60"
             )}
           >
@@ -45,7 +45,7 @@ const Header = ({ title, subtitle, lang, setLang }: HeaderProps) => {
           <button
             onClick={() => setLang("km")}
             className={cn(
-              "px-4 py-1.5 text-[10px] font-bold transition-all rounded-full khmer-font",
+              "px-5 py-2.5 text-sm font-bold transition-all rounded-full khmer-font",
               lang === "km" ? "bg-white text-emerald-600 shadow-sm" : "text-emerald-900/40 hover:text-emerald-900/60"
             )}
           >
