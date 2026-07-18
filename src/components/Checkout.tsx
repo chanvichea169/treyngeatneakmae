@@ -33,7 +33,6 @@ interface FormData {
 const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     paymentMethod: "bank",
