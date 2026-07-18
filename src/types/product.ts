@@ -9,7 +9,7 @@ export type Product = {
     km: string;
   };
   price: number;
-  image: string;
+  imageName: string;
   description?: {
     en?: string;
     km?: string;

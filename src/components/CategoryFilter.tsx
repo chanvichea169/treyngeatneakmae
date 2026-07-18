@@ -24,7 +24,7 @@ const CategoryFilter = ({
               key={cat.en}
               onClick={() => onSelectCategory(cat.en)}
               className={cn(
-                "flex-shrink-0 rounded-full sm:rounded-2xl border px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-semibold whitespace-nowrap",
+                "flex-shrink-0 rounded-full sm:rounded-2xl border px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-colors duration-200",
                 isActive
                   ? "bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-100/50"
                   : "bg-white text-slate-500 border-emerald-100 hover:border-emerald-200 hover:text-emerald-700",

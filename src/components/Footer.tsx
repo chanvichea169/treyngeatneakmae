@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Phone, Send } from "lucide-react";
+import { MessageCircle, Phone, Send, Mail } from "lucide-react";
 import { cn } from "../utils/cn";
 
 interface FooterProps {
@@ -23,19 +23,25 @@ const Footer = ({ lang, texts }: FooterProps) => {
       icon: Phone,
       label: lang === "en" ? "Phone" : "ទូរស័ព្ទ",
       value: texts.phone,
-      href: "tel:+85512345678",
+      href: "tel:+855969757940",
+    },
+    {
+      icon: Mail,
+      label: lang === "en" ? "Email" : "អ៊ីមែល",
+      value: "treyngeatneakmae05@gmail.com",
+      href: "mailto:treyngeatneakmae05@gmail.com",
     },
     {
       icon: Send,
       label: "Telegram",
       value: "@treyngeatneakmae",
-      href: "https://t.me/treyngeatneakmae",
+      href: "https://t.me/treyngeatneakmae05",
     },
     {
       icon: MessageCircle,
       label: "Facebook",
       value: "Treyngeat Neak Mae",
-      href: "https://www.facebook.com/treyngeatneakmae",
+      href: "https://web.facebook.com/profile.php?id=61589376340405",
     },
   ];
 
@@ -113,7 +119,7 @@ const Footer = ({ lang, texts }: FooterProps) => {
         </div>
 
         {/* Contact Cards - Tablet and Desktop */}
-        <div className="mt-6 hidden sm:grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 hidden sm:grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {contactItems.map((item, index) => {
             const Icon = item.icon;
             return (

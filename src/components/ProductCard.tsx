@@ -10,6 +10,45 @@ interface ProductCardProps {
   onAddToCart?: (product: Product, quantity: number) => void;
 }
 
+// Helper function to get image path
+const getImagePath = (imageName: string): string => {
+  // If it's already a full URL, return as is
+  if (imageName?.startsWith('http://') || imageName?.startsWith('https://')) {
+    return imageName;
+  }
+  
+  // If it's a local path, return as is
+  if (imageName?.startsWith('/') || imageName?.startsWith('./') || imageName?.startsWith('assets/')) {
+    return imageName;
+  }
+  
+  // For product1.png, product2.png, etc. - assume they're in assets/products
+  if (imageName) {
+    return `/assets/products/${imageName}`;
+  }
+  
+  // Fallback
+  return "";
+};
+
+// Convert Riel to USD (1 USD = 4,000 Riel)
+const convertRielToUSD = (rielAmount: number): number => {
+  const exchangeRate = 4000;
+  return rielAmount / exchangeRate;
+};
+
+// Format price based on language
+const formatPrice = (price: number, lang: "en" | "km"): string => {
+  if (lang === "en") {
+    // Show in USD
+    const usdAmount = convertRielToUSD(price);
+    return `$${usdAmount.toFixed(2)}`;
+  } else {
+    // Show in Riel with proper Khmer formatting
+    return `៛${price.toLocaleString()}`;
+  }
+};
+
 const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -30,6 +69,34 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
     setQuantity(1);
   };
 
+  // Get the image path
+  const imageSrc = getImagePath(product.imageName);
+
+  // Translations with proper Khmer font
+  const translations = {
+    en: {
+      perKg: "/ kg",
+      inStock: "In Stock",
+      add: "Add",
+      added: "Added!",
+      noImage: "No Image",
+      quickView: "Quick View",
+    },
+    km: {
+      perKg: "/ គីឡូ",
+      inStock: "មានស្តុក",
+      add: "បន្ថែម",
+      added: "បានបន្ថែម!",
+      noImage: "គ្មានរូបភាព",
+      quickView: "មើលរហ័ស",
+    },
+  };
+
+  const t = translations[lang];
+
+  // Get formatted price based on language
+  const displayPrice = formatPrice(product.price, lang);
+
   return (
     <motion.div
       layout
@@ -42,9 +109,9 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
     >
       {/* Image Container - Reduced height */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-emerald-50/80 to-teal-50/80">
-        {!imageError ? (
+        {!imageError && imageSrc ? (
           <img
-            src={product.image}
+            src={imageSrc}
             alt={product.name[lang]}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             onError={() => setImageError(true)}
@@ -53,14 +120,14 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gray-50">
             <ImageOff className="h-8 w-8 sm:h-10 sm:w-10 text-gray-300" />
-            <span className="text-xs sm:text-sm text-gray-400">No Image</span>
+            <span className="text-xs sm:text-sm text-gray-400">{t.noImage}</span>
           </div>
         )}
 
         {/* Quick View Overlay - Hidden on mobile */}
         <div className="absolute inset-0 hidden sm:flex items-center justify-center bg-emerald-900/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
           <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-emerald-700 shadow-lg backdrop-blur-sm">
-            Quick View
+            {t.quickView}
           </span>
         </div>
       </div>
@@ -89,12 +156,17 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
           </p>
         )}
 
-        {/* Price - Smaller */}
+        {/* Price - Smaller with conversion */}
         <div className="flex items-baseline gap-1 pt-0.5">
           <span className="text-base sm:text-xl font-bold text-emerald-600">
-            ${Number(product.price).toFixed(2)}
+            {displayPrice}
           </span>
-          <span className="text-[9px] sm:text-[10px] text-gray-400">/ unit</span>
+          <span className={cn(
+            "text-[9px] sm:text-[10px] text-gray-500",
+            lang === "km" && "khmer-font"
+          )}>
+            {t.perKg}
+          </span>
         </div>
 
         {/* Quantity Controls & Add to Cart - Compact */}
@@ -125,8 +197,7 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
           </div>
 
           {/* Add to Cart Button - Compact */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
+          <button
             onClick={handleAddToCart}
             className={cn(
               "flex flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-xl px-2.5 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-semibold text-white shadow-sm transition-all duration-300",
@@ -138,24 +209,27 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
             {added ? (
               <>
                 <Check className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Added!</span>
+                <span className="hidden xs:inline">{t.added}</span>
                 <span className="xs:hidden">✓</span>
               </>
             ) : (
               <>
                 <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Add</span>
+                <span className="hidden xs:inline">{t.add}</span>
                 <span className="xs:hidden">+</span>
               </>
             )}
-          </motion.button>
+          </button>
         </div>
 
         {/* Stock Status - Compact */}
         <div className="flex items-center gap-1 pt-0.5">
           <div className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[7px] sm:text-[9px] font-medium text-emerald-600">
-            In Stock
+          <span className={cn(
+            "text-[7px] sm:text-[9px] font-medium text-emerald-600",
+            lang === "km" && "khmer-font"
+          )}>
+            {t.inStock}
           </span>
         </div>
       </div>

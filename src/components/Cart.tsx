@@ -14,6 +14,37 @@ interface CartProps {
   lang: "en" | "km";
 }
 
+// Helper function to get image path
+const getImagePath = (imageName: string): string => {
+  if (!imageName) return "";
+  
+  if (imageName?.startsWith('http://') || imageName?.startsWith('https://')) {
+    return imageName;
+  }
+  
+  if (imageName?.startsWith('/') || imageName?.startsWith('./') || imageName?.startsWith('assets/')) {
+    return imageName;
+  }
+  
+  return `/assets/products/${imageName}`;
+};
+
+// Convert Riel to USD (1 USD = 4,000 Riel)
+const convertRielToUSD = (rielAmount: number): number => {
+  const exchangeRate = 4000;
+  return rielAmount / exchangeRate;
+};
+
+// Format price based on language
+const formatPrice = (price: number, lang: "en" | "km"): string => {
+  if (lang === "en") {
+    const usdAmount = convertRielToUSD(price);
+    return `$${usdAmount.toFixed(2)}`;
+  } else {
+    return `៛${price.toLocaleString()}`;
+  }
+};
+
 const Cart = ({
   isOpen,
   onClose,
@@ -40,6 +71,8 @@ const Cart = ({
       clear: "Clear Cart",
       quantity: "Qty",
       remove: "Remove",
+      price: "Price",
+      items: "items",
     },
     km: {
       title: "កន្ត្រករបស់អ្នក",
@@ -50,10 +83,15 @@ const Cart = ({
       clear: "ទទេកន្ត្រក",
       quantity: "ចំនួន",
       remove: "លុប",
+      price: "តម្លៃ",
+      items: "មុខ",
     },
   };
 
   const t = texts[lang];
+
+  // Per unit label
+  const perUnit = lang === "en" ? "/ kg" : "/ គីឡូ";
 
   return (
     <AnimatePresence>
@@ -122,71 +160,84 @@ const Cart = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {items.map((item) => (
-                    <motion.div
-                      key={item.product.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      className="flex gap-3 rounded-2xl border border-emerald-100/60 bg-white p-3 shadow-sm"
-                    >
-                      {/* Product Image */}
-                      <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-emerald-50">
-                        <img
-                          src={item.product.image}
-                          alt={item.product.name[lang]}
-                          className="h-full w-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://via.placeholder.com/80";
-                          }}
-                        />
-                      </div>
+                  {items.map((item) => {
+                    const imageSrc = getImagePath(item.product.imageName || item.product.imageName  );
+                    const itemTotal = item.product.price * item.quantity;
+                    
+                    return (
+                      <motion.div
+                        key={item.product.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="flex gap-3 rounded-2xl border border-emerald-100/60 bg-white p-3 shadow-sm"
+                      >
+                        {/* Product Image */}
+                        <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-emerald-50">
+                          {imageSrc ? (
+                            <img
+                              src={imageSrc}
+                              alt={item.product.name[lang]}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://via.placeholder.com/80/emerald?text=No+Image";
+                              }}
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                              <ShoppingBag className="h-8 w-8 text-gray-300" />
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Product Info */}
-                      <div className="flex flex-1 flex-col">
-                        <h4 className={cn(
-                          "text-sm font-semibold text-slate-800",
-                          lang === "km" && "khmer-font"
-                        )}>
-                          {item.product.name[lang]}
-                        </h4>
-                        <p className="text-sm font-bold text-emerald-600">
-                          ${(item.product.price * item.quantity).toFixed(2)}
-                        </p>
+                        {/* Product Info */}
+                        <div className="flex flex-1 flex-col">
+                          <h4 className={cn(
+                            "text-sm font-semibold text-slate-800",
+                            lang === "km" && "khmer-font"
+                          )}>
+                            {item.product.name[lang]}
+                          </h4>
+                          <p className="text-sm font-bold text-emerald-600">
+                            {formatPrice(itemTotal, lang)} {perUnit}
+                          </p>
 
-                        {/* Quantity Controls */}
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="flex items-center rounded-lg border border-emerald-200/60 bg-emerald-50/50">
+                          {/* Quantity Controls */}
+                          <div className="mt-1 flex items-center gap-2">
+                            <div className="flex items-center rounded-lg border border-emerald-200/60 bg-emerald-50/50">
+                              <button
+                                onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
+                                className="flex h-7 w-7 items-center justify-center rounded-l-lg text-emerald-600 transition-colors hover:bg-emerald-100 disabled:opacity-40"
+                                aria-label="Decrease quantity"
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <span className="w-7 text-center text-xs font-semibold text-emerald-700">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
+                                className="flex h-7 w-7 items-center justify-center rounded-r-lg text-emerald-600 transition-colors hover:bg-emerald-100 disabled:opacity-40"
+                                aria-label="Increase quantity"
+                                disabled={item.quantity >= 99}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
+
                             <button
-                              onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
-                              className="flex h-7 w-7 items-center justify-center rounded-l-lg text-emerald-600 transition-colors hover:bg-emerald-100"
-                              aria-label="Decrease quantity"
+                              onClick={() => onRemoveItem(item.product.id)}
+                              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                              aria-label={t.remove}
                             >
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="w-7 text-center text-xs font-semibold text-emerald-700">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                              className="flex h-7 w-7 items-center justify-center rounded-r-lg text-emerald-600 transition-colors hover:bg-emerald-100"
-                              aria-label="Increase quantity"
-                            >
-                              <Plus className="h-3 w-3" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
-
-                          <button
-                            onClick={() => onRemoveItem(item.product.id)}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500"
-                            aria-label={t.remove}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -200,22 +251,28 @@ const Cart = ({
                       "text-xs text-slate-400",
                       lang === "km" && "khmer-font"
                     )}>
-                      {t.total} ({totalItems} {lang === "en" ? "items" : "មុខ"})
+                      {t.total} ({totalItems} {t.items})
                     </p>
                     <p className="text-2xl font-black text-emerald-600">
-                      ${totalPrice.toFixed(2)}
+                      {formatPrice(totalPrice, lang)}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={onClearCart}
-                      className="rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-50"
+                      className={cn(
+                        "rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-500 transition-colors hover:bg-red-50",
+                        lang === "km" && "khmer-font"
+                      )}
                     >
                       {t.clear}
                     </button>
                     <button
                       onClick={onCheckout}
-                      className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-200/50 transition-colors hover:bg-emerald-400"
+                      className={cn(
+                        "rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-200/50 transition-colors hover:bg-emerald-400",
+                        lang === "km" && "khmer-font"
+                      )}
                     >
                       {t.checkout}
                     </button>

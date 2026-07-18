@@ -1,6 +1,19 @@
 const TELEGRAM_BOT_TOKEN = "8595782308:AAFQW-v32c8NtPDJev3nj03eM_AYNfAlb50";
 const TELEGRAM_CHAT_ID = "-1003772657604";
-// const TELEGRAM_CHAT_ID = "-1004465489324";
+
+// Exchange rate: 1 USD = 4,000 Riel
+const EXCHANGE_RATE = 4000;
+
+// Convert Riel to USD
+const convertRielToUSD = (rielAmount: number): number => {
+  return rielAmount / EXCHANGE_RATE;
+};
+
+// Format price in both currencies
+const formatPriceBoth = (rielAmount: number): string => {
+  const usdAmount = convertRielToUSD(rielAmount);
+  return `៛${rielAmount.toLocaleString()} ($${usdAmount.toFixed(2)})`;
+};
 
 export interface OrderData {
   orderId: string;
@@ -15,7 +28,7 @@ export interface OrderData {
   total: number;
   paymentMethod: "cash" | "bank";
   notes?: string;
-  invoiceUrl?: string; // Optional invoice URL
+  invoiceUrl?: string;
 }
 
 // Send order notification to Telegram with invoice link
@@ -46,43 +59,43 @@ export const sendOrderNotification = async (orderData: OrderData) => {
   }
 };
 
-// Format order message for Telegram with invoice link
+// Format order message for Telegram with both Riel and USD
 const formatOrderMessage = (order: OrderData): string => {
   const itemsList = order.items
     .map(
       (item, index) =>
-        `${index + 1}. ${item.name} x ${item.quantity} = $${(item.price * item.quantity).toFixed(2)}`
+        `${index + 1}. ${item.name} x ${item.quantity} = ${formatPriceBoth(item.price * item.quantity)}`
     )
     .join("\n");
 
   const paymentMethod = order.paymentMethod === "cash" ? "Cash on Delivery" : "Bank Transfer (ABA)";
 
   let message = `
-NEW ORDER!
+🛍️ NEW ORDER!
 ----------------------------------------
-Order Details
+📋 Order Details
 Order ID: ${order.orderId}
 Payment: ${paymentMethod}
 ----------------------------------------
-Customer Information
+👤 Customer Information
 Name: ${order.customerName}
 Phone: ${order.phone}
 Address: ${order.address}
 ----------------------------------------
-Order Items
+📦 Order Items
 ${itemsList}
 ----------------------------------------
-Total Amount
-$${order.total.toFixed(2)}
-${order.notes ? `\nNotes:\n${order.notes}` : ""}
+💰 Total Amount
+${formatPriceBoth(order.total)}
+${order.notes ? `\n📝 Notes:\n${order.notes}` : ""}
 `;
 
   // Add invoice download link if available
   if (order.invoiceUrl) {
-    message += `📄 Download Invoice:\n${order.invoiceUrl}`;
+    message += `\n📄 Download Invoice:\n${order.invoiceUrl}`;
   }
 
-  message += `----------------------------------------\n${new Date().toLocaleString()}`;
+  message += `\n----------------------------------------\n⏰ ${new Date().toLocaleString()}`;
 
   return message;
 };

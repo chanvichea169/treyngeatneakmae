@@ -38,13 +38,44 @@ interface FormData {
   notes: string;
 }
 
+// Helper function to get image path
+const getImagePath = (imageName: string): string => {
+  if (!imageName) return "";
+  
+  if (imageName?.startsWith('http://') || imageName?.startsWith('https://')) {
+    return imageName;
+  }
+  
+  if (imageName?.startsWith('/') || imageName?.startsWith('./') || imageName?.startsWith('assets/')) {
+    return imageName;
+  }
+  
+  return `/assets/products/${imageName}`;
+};
+
+// Convert Riel to USD (1 USD = 4,000 Riel)
+const convertRielToUSD = (rielAmount: number): number => {
+  const exchangeRate = 4000;
+  return rielAmount / exchangeRate;
+};
+
+// Format price based on language
+const formatPrice = (price: number, lang: "en" | "km"): string => {
+  if (lang === "en") {
+    const usdAmount = convertRielToUSD(price);
+    return `$${usdAmount.toFixed(2)}`;
+  } else {
+    return `៛${price.toLocaleString()}`;
+  }
+};
+
 const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [orderItems, setOrderItems] = useState<CartItem[]>([]);
-  const [grandTotal, setGrandTotal] = useState(0); // Store total separately
+  const [grandTotal, setGrandTotal] = useState(0);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState<FormData>({
     customerName: "",
@@ -61,6 +92,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
 
   // Use the stored grandTotal for display, or calculate from items
   const totalPrice = grandTotal || calculateTotal(orderItems) || calculateTotal(items);
+  
   const bankAccount = {
     accountName: "VICHEA CHANN",
     accountNumber: "014317827",
@@ -73,6 +105,9 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
 
   const orderId = `TN${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
   const orderDate = new Date().toLocaleString();
+
+  // Currency and unit translations
+  const perUnit = lang === "en" ? "/ kg" : "/ គីឡូ";
 
   const texts = {
     en: {
@@ -114,6 +149,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       formalThankYou: "We sincerely appreciate your trust in choosing our products. Your order has been confirmed and will be processed with the utmost care. We look forward to serving you again.",
       email: "hello@treyngeatneakmae.com",
       location: "Phnom Penh, Cambodia",
+      phoneLabel: "Phone",
     },
     km: {
       title: "បញ្ជាទិញ",
@@ -154,6 +190,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       formalThankYou: "យើងខ្ញុំសូមថ្លែងអំណរគុណយ៉ាងជ្រាលជ្រៅចំពោះការទុកចិត្តរបស់អ្នកក្នុងការជ្រើសរើសផលិតផលរបស់យើង។ ការបញ្ជាទិញរបស់អ្នកត្រូវបានបញ្ជាក់ និងនឹងត្រូវបានដំណើរការដោយយកចិត្តទុកដាក់បំផុត។ យើងខ្ញុំសូមរង់ចាំបម្រើសេវាកម្មអ្នកម្តងទៀត។",
       email: "hello@treyngeatneakmae.com",
       location: "ភ្នំពេញ, កម្ពុជា",
+      phoneLabel: "ទូរស័ព្ទ",
     },
   };
 
@@ -209,15 +246,12 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
     setIsSubmitting(true);
 
     try {
-      // Calculate total BEFORE clearing anything
       const calculatedTotal = calculateTotal(items);
       setGrandTotal(calculatedTotal);
       
-      // Store items in state before clearing
       const itemsCopy = [...items];
       setOrderItems(itemsCopy);
       
-      // Prepare order data for Telegram
       const orderData = {
         orderId: orderId,
         customerName: formData.customerName,
@@ -228,19 +262,16 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
           quantity: item.quantity,
           price: item.product.price,
         })),
-        total: calculatedTotal, // Use the calculated total
+        total: calculatedTotal,
         paymentMethod: formData.paymentMethod as "cash" | "bank",
         notes: formData.notes || undefined,
       };
 
-      // Send notification to Telegram
       await sendOrderNotification(orderData);
       
-      // Clear cart
       onClearCart();
       setIsSuccess(true);
 
-      // Generate and send invoice PDF to Telegram after a short delay
       setTimeout(async () => {
         await generateAndSendInvoice(itemsCopy);
       }, 1000);
@@ -254,7 +285,8 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
   };
 
   const handleCopyAllDetails = () => {
-    const details = `🏦 ${bankAccount.bankName}\n📋 Account: ${bankAccount.accountName}\n🔢 Number: ${bankAccount.accountNumber}\n💵 Amount: $${bankAccount.amount}\n📝 Reference: ${orderId}`;
+    const displayAmount = lang === "en" ? `$${convertRielToUSD(Number(bankAccount.amount)).toFixed(2)}` : `៛${Number(bankAccount.amount).toLocaleString()}`;
+    const details = `🏦 ${bankAccount.bankName}\n📋 Account: ${bankAccount.accountName}\n🔢 Number: ${bankAccount.accountNumber}\n💵 Amount: ${displayAmount}\n📝 Reference: ${orderId}`;
     navigator.clipboard.writeText(details);
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 3000);
@@ -325,7 +357,6 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
               </button>
 
               {!isSuccess ? (
-                // Checkout Form
                 <div className="p-6 sm:p-8">
                   <div className="flex items-center gap-3 border-b border-emerald-100/60 pb-4">
                     <h2 className={cn(
@@ -347,44 +378,53 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                         </h3>
 
                         <div className="max-h-40 space-y-3 overflow-y-auto pr-2">
-                          {items.map((item) => (
-                            <div
-                              key={item.product.id}
-                              className="flex gap-3 rounded-xl border border-emerald-100/60 p-3"
-                            >
-                              <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-emerald-50">
-                                <img
-                                  src={item.product.image}
-                                  alt={item.product.name[lang]}
-                                  className="h-full w-full object-cover"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "https://via.placeholder.com/64";
-                                  }}
-                                />
+                          {items.map((item) => {
+                            const imageSrc = getImagePath(item.product.imageName || item.product.imageName);
+                            return (
+                              <div
+                                key={item.product.id}
+                                className="flex gap-3 rounded-xl border border-emerald-100/60 p-3"
+                              >
+                                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-emerald-50">
+                                  {imageSrc ? (
+                                    <img
+                                      src={imageSrc}
+                                      alt={item.product.name[lang]}
+                                      className="h-full w-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = "https://via.placeholder.com/64";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                                      <span className="text-xs text-gray-400">No img</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-1 flex-col">
+                                  <h4 className={cn(
+                                    "text-sm font-semibold text-slate-800",
+                                    lang === "km" && "khmer-font"
+                                  )}>
+                                    {item.product.name[lang]}
+                                  </h4>
+                                  <p className="text-xs text-slate-400">
+                                    {t.items}: {item.quantity}
+                                  </p>
+                                  <p className="text-sm font-bold text-emerald-600">
+                                    {formatPrice(item.product.price * item.quantity, lang)} {perUnit}
+                                  </p>
+                                </div>
                               </div>
-                              <div className="flex flex-1 flex-col">
-                                <h4 className={cn(
-                                  "text-sm font-semibold text-slate-800",
-                                  lang === "km" && "khmer-font"
-                                )}>
-                                  {item.product.name[lang]}
-                                </h4>
-                                <p className="text-xs text-slate-400">
-                                  {t.items}: {item.quantity}
-                                </p>
-                                <p className="text-sm font-bold text-emerald-600">
-                                  ${(item.product.price * item.quantity).toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
 
                         <div className="mt-4 rounded-xl bg-emerald-50/50 p-4">
                           <div className="flex justify-between text-base font-bold">
                             <span className="text-slate-800">{t.total}</span>
                             <span className="text-emerald-600">
-                              ${calculateTotal(items).toFixed(2)}
+                              {formatPrice(calculateTotal(items), lang)}
                             </span>
                           </div>
                         </div>
@@ -619,199 +659,199 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                       {t.downloadInvoice}
                     </button>
 
-{/* Invoice Preview - Premium Design */}
-<div 
-  ref={invoiceRef} 
-  className="fixed left-[-9999px] top-0 bg-white" 
-  style={{ width: '210mm', position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}
->
-  <div className="p-8" style={{ fontFamily: 'Arial, sans-serif' }}>
-    {/* Top Decorative Bar */}
-    <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400 rounded-full mb-6" />
+                    {/* Invoice Preview */}
+                    <div 
+                      ref={invoiceRef} 
+                      className="fixed left-[-9999px] top-0 bg-white" 
+                      style={{ width: '210mm', position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}
+                    >
+                      <div className="p-8">
+                        {/* Top Decorative Bar */}
+                        <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400 rounded-full mb-6" />
 
-    {/* Header */}
-    <div className="flex items-center justify-between border-b-2 border-emerald-100 pb-6">
-      <div className="flex items-center gap-4">
-        <div className="h-16 w-16 rounded-xl overflow-hidden shadow-lg shadow-emerald-100/50 border-2 border-emerald-50/80">
-          <img src={logo} alt="Logo" className="h-full w-full object-cover" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-extrabold text-emerald-600 tracking-tight">{t.invoice}</h1>
-          <p className="text-sm text-slate-400 font-medium">#{orderId}</p>
-        </div>
-      </div>
-      <div className="text-right">
-        <p className="text-sm font-bold text-slate-800">Treyngeat Neak Mae</p>
-        <p className="text-xs text-slate-400 mt-0.5">{orderDate}</p>
-        <div className="mt-1 flex items-center justify-end gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] font-medium text-emerald-600">Verified</span>
-        </div>
-      </div>
-    </div>
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b-2 border-emerald-100 pb-6">
+                          <div className="flex items-center gap-4">
+                            <div className="h-16 w-16 rounded-xl overflow-hidden shadow-lg shadow-emerald-100/50 border-2 border-emerald-50/80">
+                              <img src={logo} alt="Logo" className="h-full w-full object-cover" />
+                            </div>
+                            <div>
+                              <h1 className="text-3xl font-extrabold text-emerald-600 tracking-tight">{t.invoice}</h1>
+                              <p className="text-sm text-slate-400 font-medium">#{orderId}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-slate-800">Treyngeat Neak Mae</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{orderDate}</p>
+                            <div className="mt-1 flex items-center justify-end gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              <span className="text-[10px] font-medium text-emerald-600">Verified</span>
+                            </div>
+                          </div>
+                        </div>
 
-    {/* Customer & Payment Details */}
-    <div className="mt-6 grid grid-cols-2 gap-4">
-      <div className="rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/50 to-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
-            <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h3 className="text-sm font-bold text-slate-700">{t.customerDetails}</h3>
-        </div>
-        <div className="space-y-1.5 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-xs font-medium w-14">Name</span>
-            <span className="text-slate-800 font-medium">: {formData.customerName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-xs font-medium w-14">Phone</span>
-            <span className="text-slate-800">: {formData.phone}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-xs font-medium w-14">Address</span>
-            <span className="text-slate-800">: {formData.address}</span>
-          </div>
-        </div>
-      </div>
+                        {/* Customer & Payment Details */}
+                        <div className="mt-6 grid grid-cols-2 gap-4">
+                          <div className="rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/50 to-white p-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              </div>
+                              <h3 className="text-sm font-bold text-slate-700">{t.customerDetails}</h3>
+                            </div>
+                            <div className="space-y-1.5 text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-xs font-medium w-14">Name</span>
+                                <span className="text-slate-800 font-medium">: {formData.customerName}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-xs font-medium w-14">Phone</span>
+                                <span className="text-slate-800">: {formData.phone}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-xs font-medium w-14">Address</span>
+                                <span className="text-slate-800">: {formData.address}</span>
+                              </div>
+                            </div>
+                          </div>
 
-      <div className="rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/50 to-white p-4 shadow-sm">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
-            <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          </div>
-          <h3 className="text-sm font-bold text-slate-700">{t.paymentDetails}</h3>
-        </div>
-        <div className="space-y-1.5 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-xs font-medium w-14">Method</span>
-            <span className="text-slate-800">: {formData.paymentMethod === "bank" ? "ABA Bank Transfer" : "Cash on Delivery"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-xs font-medium w-14">Status</span>
-            <span className="text-emerald-600 font-medium">: ● Pending</span>
-          </div>
-          {formData.paymentMethod === "bank" && (
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-xs font-medium w-14">Account</span>
-              <span className="text-slate-800 font-mono">: {bankAccount.accountNumber}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+                          <div className="rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50/50 to-white p-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                </svg>
+                              </div>
+                              <h3 className="text-sm font-bold text-slate-700">{t.paymentDetails}</h3>
+                            </div>
+                            <div className="space-y-1.5 text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-xs font-medium w-14">Method</span>
+                                <span className="text-slate-800">: {formData.paymentMethod === "bank" ? "ABA Bank Transfer" : "Cash on Delivery"}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-xs font-medium w-14">Status</span>
+                                <span className="text-emerald-600 font-medium">: ● Pending</span>
+                              </div>
+                              {formData.paymentMethod === "bank" && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-400 text-xs font-medium w-14">Account</span>
+                                  <span className="text-slate-800 font-mono">: {bankAccount.accountNumber}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
-    {/* Order Items */}
-    <div className="mt-6">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
-          <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        </div>
-        <h3 className="text-sm font-bold text-slate-700">{t.orderDetails}</h3>
-        <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
-          {orderItems.length} {t.items}
-        </span>
-      </div>
+                        {/* Order Items */}
+                        <div className="mt-6">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="h-6 w-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                              <svg className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-bold text-slate-700">{t.orderDetails}</h3>
+                            <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                              {orderItems.length} {t.items}
+                            </span>
+                          </div>
 
-      {orderItems.length > 0 ? (
-        <div className="rounded-xl border border-emerald-200/60 overflow-hidden shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-gradient-to-r from-emerald-50 to-teal-50/50 border-b-2 border-emerald-200/60">
-                <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t.item}</th>
-                <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">{t.qty}</th>
-                <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">{t.price}</th>
-                <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">{t.subtotal}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderItems.map((item, index) => (
-                <tr 
-                  key={item.product.id} 
-                  className={cn(
-                    "border-b border-slate-100 transition-colors",
-                    index % 2 === 0 ? "bg-white" : "bg-emerald-50/20"
-                  )}
-                >
-                  <td className="px-4 py-3 text-slate-800 font-medium">{item.product.name[lang]}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center bg-emerald-100 text-emerald-700 font-bold text-xs w-6 h-6 rounded-full">
-                      {item.quantity}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-slate-600">${item.product.price.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-slate-800">${(item.product.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gradient-to-r from-emerald-50/80 to-teal-50/80 border-t-2 border-emerald-200">
-                <td colSpan={3} className="px-4 py-4 text-right font-bold text-slate-800 text-base">
-                  {t.total}
-                </td>
-                <td className="px-4 py-4 text-right font-extrabold text-emerald-600 text-lg">
-                  ${grandTotal.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-sm text-slate-500">No items in order</p>
-        </div>
-      )}
-    </div>
+                          {orderItems.length > 0 ? (
+                            <div className="rounded-xl border border-emerald-200/60 overflow-hidden shadow-sm">
+                              <table className="w-full border-collapse text-sm">
+                                <thead>
+                                  <tr className="bg-gradient-to-r from-emerald-50 to-teal-50/50 border-b-2 border-emerald-200/60">
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t.item}</th>
+                                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">{t.qty}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">{t.price}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">{t.subtotal}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {orderItems.map((item, index) => (
+                                    <tr 
+                                      key={item.product.id} 
+                                      className={cn(
+                                        "border-b border-slate-100 transition-colors",
+                                        index % 2 === 0 ? "bg-white" : "bg-emerald-50/20"
+                                      )}
+                                    >
+                                      <td className="px-4 py-3 text-slate-800 font-medium">{item.product.name[lang]}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span className="inline-flex items-center justify-center bg-emerald-100 text-emerald-700 font-bold text-xs w-6 h-6 rounded-full">
+                                          {item.quantity}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right text-slate-600">{formatPrice(item.product.price, lang)}</td>
+                                      <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatPrice(item.product.price * item.quantity, lang)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="bg-gradient-to-r from-emerald-50/80 to-teal-50/80 border-t-2 border-emerald-200">
+                                    <td colSpan={3} className="px-4 py-4 text-right font-bold text-slate-800 text-base">
+                                      {t.total}
+                                    </td>
+                                    <td className="px-4 py-4 text-right font-extrabold text-emerald-600 text-lg">
+                                      {formatPrice(grandTotal, lang)}
+                                    </td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">
+                              <p className="text-sm text-slate-500">No items in order</p>
+                            </div>
+                          )}
+                        </div>
 
-    {/* Notes */}
-    {formData.notes && (
-      <div className="mt-4 p-4 rounded-xl border border-amber-200/60 bg-amber-50/30">
-        <div className="flex items-start gap-2">
-          <svg className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          <div>
-            <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Notes</h3>
-            <p className="text-sm text-slate-600 mt-0.5">{formData.notes}</p>
-          </div>
-        </div>
-      </div>
-    )}
+                        {/* Notes */}
+                        {formData.notes && (
+                          <div className="mt-4 p-4 rounded-xl border border-amber-200/60 bg-amber-50/30">
+                            <div className="flex items-start gap-2">
+                              <svg className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              <div>
+                                <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Notes</h3>
+                                <p className="text-sm text-slate-600 mt-0.5">{formData.notes}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-    {/* Footer */}
-    <div className="mt-8 pt-6 border-t-2 border-emerald-100">
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <span className="h-0.5 w-8 bg-emerald-200" />
-          <span className="text-sm font-bold text-emerald-600">{t.thankYou}</span>
-          <span className="h-0.5 w-8 bg-emerald-200" />
-        </div>
-        <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
-          {t.formalThankYou}
-        </p>
-        <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-slate-400">
-          <span>📧 {texts[lang].email}</span>
-          <span className="h-3 w-px bg-slate-300" />
-          <span>📱 {texts[lang].phone}</span>
-          <span className="h-3 w-px bg-slate-300" />
-          <span>📍 {texts[lang].location}</span>
-        </div>
-        <p className="mt-3 text-[10px] text-slate-400">
-          Treyngeat Neak Mae © {new Date().getFullYear()}
-        </p>
-      </div>
-    </div>
+                        {/* Footer */}
+                        <div className="mt-8 pt-6 border-t-2 border-emerald-100">
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <span className="h-0.5 w-8 bg-emerald-200" />
+                              <span className="text-sm font-bold text-emerald-600">{t.thankYou}</span>
+                              <span className="h-0.5 w-8 bg-emerald-200" />
+                            </div>
+                            <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
+                              {t.formalThankYou}
+                            </p>
+                            <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-slate-400">
+                              <span>📧 {texts[lang].email}</span>
+                              <span className="h-3 w-px bg-slate-300" />
+                              <span>📱 {texts[lang].phone}</span>
+                              <span className="h-3 w-px bg-slate-300" />
+                              <span>📍 {texts[lang].location}</span>
+                            </div>
+                            <p className="mt-3 text-[10px] text-slate-400">
+                              Treyngeat Neak Mae © {new Date().getFullYear()}
+                            </p>
+                          </div>
+                        </div>
 
-    {/* Bottom Decorative Bar */}
-    <div className="mt-4 h-1 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400 rounded-full" />
-  </div>
-</div>
+                        {/* Bottom Decorative Bar */}
+                        <div className="mt-4 h-1 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400 rounded-full" />
+                      </div>
+                    </div>
 
                     <button
                       onClick={handleContinueShopping}
