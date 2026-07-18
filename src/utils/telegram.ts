@@ -1,8 +1,12 @@
 const TELEGRAM_BOT_TOKEN = "8595782308:AAFQW-v32c8NtPDJev3nj03eM_AYNfAlb50";
 const TELEGRAM_CHAT_ID = "-1003772657604";
+// const TELEGRAM_CHAT_ID = "-1004465489324";
 
 export interface OrderData {
   orderId: string;
+  customerName: string;
+  phone: string;
+  address: string;
   items: {
     name: string;
     quantity: number;
@@ -11,9 +15,10 @@ export interface OrderData {
   total: number;
   paymentMethod: "cash" | "bank";
   notes?: string;
+  invoiceUrl?: string; // Optional invoice URL
 }
 
-// Send order notification to Telegram
+// Send order notification to Telegram with invoice link
 export const sendOrderNotification = async (orderData: OrderData) => {
   try {
     const message = formatOrderMessage(orderData);
@@ -41,7 +46,7 @@ export const sendOrderNotification = async (orderData: OrderData) => {
   }
 };
 
-// Format order message for Telegram - All White/Plain Text
+// Format order message for Telegram with invoice link
 const formatOrderMessage = (order: OrderData): string => {
   const itemsList = order.items
     .map(
@@ -50,14 +55,19 @@ const formatOrderMessage = (order: OrderData): string => {
     )
     .join("\n");
 
-  const paymentMethod = order.paymentMethod === "cash" ? "Cash on Delivery" : "Bank Transfer";
+  const paymentMethod = order.paymentMethod === "cash" ? "Cash on Delivery" : "Bank Transfer (ABA)";
 
-  return `
+  let message = `
 NEW ORDER!
 ----------------------------------------
 Order Details
 Order ID: ${order.orderId}
 Payment: ${paymentMethod}
+----------------------------------------
+Customer Information
+Name: ${order.customerName}
+Phone: ${order.phone}
+Address: ${order.address}
 ----------------------------------------
 Order Items
 ${itemsList}
@@ -65,9 +75,40 @@ ${itemsList}
 Total Amount
 $${order.total.toFixed(2)}
 ${order.notes ? `\nNotes:\n${order.notes}` : ""}
-----------------------------------------
-${new Date().toLocaleString()}
-  `;
+`;
+
+  // Add invoice download link if available
+  if (order.invoiceUrl) {
+    message += `📄 Download Invoice:\n${order.invoiceUrl}`;
+  }
+
+  message += `----------------------------------------\n${new Date().toLocaleString()}`;
+
+  return message;
+};
+
+// Send invoice file to Telegram
+export const sendInvoiceFile = async (orderId: string, pdfBlob: Blob) => {
+  try {
+    const formData = new FormData();
+    formData.append('chat_id', TELEGRAM_CHAT_ID);
+    formData.append('document', pdfBlob, `invoice-${orderId}.pdf`);
+    formData.append('caption', `📄 Invoice for Order #${orderId}`);
+
+    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to send invoice file to Telegram");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Telegram invoice file error:", error);
+    return null;
+  }
 };
 
 // Send simple message to Telegram
