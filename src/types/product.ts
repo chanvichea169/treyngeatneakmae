@@ -10,4 +10,8 @@ export type Product = {
   };
   price: number;
   image: string;
+  description?: {
+    en?: string;
+    km?: string;
+  };
 };
