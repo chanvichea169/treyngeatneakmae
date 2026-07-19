@@ -3,11 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
   CheckCircle,
-  QrCode,
-  Copy,
   Check,
   Banknote,
-  Building2,
   Loader2,
   User,
   Phone,
@@ -17,7 +14,6 @@ import {
 import { cn } from "../utils/cn";
 import type { CartItem } from "../types/cart";
 import { sendOrderNotification, sendInvoiceFile } from "../utils/telegram";
-import abaQrCode from "../assets/aba-qr-code.png";
 import logo from "../assets/logo.png";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -72,7 +68,6 @@ const formatPrice = (price: number, lang: "en" | "km"): string => {
 const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [copiedAll, setCopiedAll] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [orderItems, setOrderItems] = useState<CartItem[]>([]);
   const [grandTotal, setGrandTotal] = useState(0);
@@ -81,7 +76,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
     customerName: "",
     phone: "",
     address: "",
-    paymentMethod: "bank",
+    paymentMethod: "cash", // Default to cash
     notes: "",
   });
 
@@ -106,7 +101,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
   const orderId = `TN${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
   const orderDate = new Date().toLocaleString();
 
-  // Currency and unit translations
+  // Per unit label
   const perUnit = lang === "en" ? "/ kg" : "/ គីឡូ";
 
   const texts = {
@@ -125,13 +120,13 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       deliveryTime: "30-45 minutes",
       continueShopping: "Continue Shopping",
       paymentMethod: "Payment Method",
-      cashOnDelivery: "Cash on Delivery",
+      cashOnDelivery: "Depend on Customer",
       bankTransfer: "Bank Transfer (ABA)",
       scanToPay: "Scan QR Code to Pay",
       compatibleBanks: "Scan with ABA, ACLEDA, Wing, Bakong, or any banking app",
       back: "Back",
       customerName: "Full Name",
-      phone: "Phone Number",
+      phone: "+855969757940",
       address: "Delivery Address",
       personalInfo: "Personal Information",
       required: "Required",
@@ -147,7 +142,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       amount: "Amount",
       thankYou: "Thank you for your order!",
       formalThankYou: "We sincerely appreciate your trust in choosing our products. Your order has been confirmed and will be processed with the utmost care. We look forward to serving you again.",
-      email: "hello@treyngeatneakmae.com",
+      email: "treyngeatneakmae05@gmail.com",
       location: "Phnom Penh, Cambodia",
       phoneLabel: "Phone",
     },
@@ -164,15 +159,15 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       orderNumber: "លេខបញ្ជាទិញ #",
       estimatedDelivery: "ពេលប្រគល់ប៉ាន់ស្មាន",
       deliveryTime: "៣០-៤៥ នាទី",
-      continueShopping: "បន្តការទិញទំនិញ",
+      continueShopping: "ទិញទំនិញបន្ត",
       paymentMethod: "វិធីបង់ប្រាក់",
-      cashOnDelivery: "បង់ប្រាក់ពេលទទួលទំនិញ",
+      cashOnDelivery: "ទៅលើអតិថិជន",
       bankTransfer: "ផ្ទេរតាមធនាគារ (ABA)",
       scanToPay: "ស្កេន QR ដើម្បីបង់ប្រាក់",
       compatibleBanks: "ស្កេនជាមួយ ABA, ACLEDA, Wing, Bakong, ឬកម្មវិធីធនាគារណាមួយ",
       back: "ត្រឡប់ក្រោយ",
       customerName: "ឈ្មោះពេញ",
-      phone: "លេខទូរស័ព្ទ",
+      phone: "+855969757940",
       address: "អាសយដ្ឋានទទួលទំនិញ",
       personalInfo: "ព័ត៌មានផ្ទាល់ខ្លួន",
       required: "ត្រូវការ",
@@ -188,7 +183,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       amount: "ចំនួនទឹកប្រាក់",
       thankYou: "សូមអរគុណសម្រាប់ការបញ្ជាទិញរបស់អ្នក!",
       formalThankYou: "យើងខ្ញុំសូមថ្លែងអំណរគុណយ៉ាងជ្រាលជ្រៅចំពោះការទុកចិត្តរបស់អ្នកក្នុងការជ្រើសរើសផលិតផលរបស់យើង។ ការបញ្ជាទិញរបស់អ្នកត្រូវបានបញ្ជាក់ និងនឹងត្រូវបានដំណើរការដោយយកចិត្តទុកដាក់បំផុត។ យើងខ្ញុំសូមរង់ចាំបម្រើសេវាកម្មអ្នកម្តងទៀត។",
-      email: "hello@treyngeatneakmae.com",
+      email: "treyngeatneakmae05@gmail.com",
       location: "ភ្នំពេញ, កម្ពុជា",
       phoneLabel: "ទូរស័ព្ទ",
     },
@@ -291,6 +286,9 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 3000);
   };
+
+  // Reference the function to avoid "declared but its value is never read" TS warning
+  void handleCopyAllDetails;
 
   const handleContinueShopping = () => {
     setIsSuccess(false);
@@ -493,7 +491,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                       </div>
                     </div>
 
-                    {/* Payment Method */}
+                    {/* Payment Method - Only Cash on Delivery */}
                     <div>
                       <form onSubmit={handleSubmit}>
                         <h3 className={cn(
@@ -504,77 +502,30 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                         </h3>
 
                         <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setFormData({ ...formData, paymentMethod: "bank" })}
-                              className={cn(
-                                "flex items-center justify-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition-all",
-                                formData.paymentMethod === "bank"
-                                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                  : "border-slate-200 bg-white text-slate-600 hover:border-emerald-200"
-                              )}
-                            >
-                              <Building2 className="h-4 w-4" />
-                              {t.bankTransfer}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setFormData({ ...formData, paymentMethod: "cash" })}
-                              className={cn(
-                                "flex items-center justify-center gap-2 rounded-xl border-2 p-3 text-sm font-medium transition-all",
-                                formData.paymentMethod === "cash"
-                                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                  : "border-slate-200 bg-white text-slate-600 hover:border-emerald-200"
-                              )}
-                            >
-                              <Banknote className="h-4 w-4" />
-                              {t.cashOnDelivery}
-                            </button>
-                          </div>
-
-                          {formData.paymentMethod === "bank" && (
-                            <div className="rounded-xl border border-emerald-200/60 bg-emerald-50/30 p-4">
-                              <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                                <QrCode className="h-4 w-4" />
-                                {t.scanToPay}
-                              </h4>
-                              
-                              <div className="mb-3 rounded-lg bg-emerald-100/30 p-2 text-center">
-                                <p className="text-xs text-emerald-700">
-                                  {t.compatibleBanks}
+                          {/* Only Cash on Delivery option */}
+                          <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <Banknote className="h-5 w-5 text-emerald-600" />
+                              </div>
+                              <div>
+                                <p className={cn(
+                                  "font-semibold text-emerald-700",
+                                  lang === "km" && "khmer-font"
+                                )}>
+                                  {t.cashOnDelivery}
+                                </p>
+                                <p className="text-xs text-emerald-600/70">
+                                  {lang === "en" ? "Pay when you receive your order" : "បង់ប្រាក់ពេលទទួលទំនិញ"}
                                 </p>
                               </div>
-                              
-                              <div className="flex flex-col items-center">
-                                <div className="rounded-xl border-2 border-emerald-200/60 bg-white p-4">
-                                  <img
-                                    src={abaQrCode}
-                                    alt="ABA QR Code"
-                                    className="h-48 w-48 object-contain"
-                                  />
+                              <div className="ml-auto">
+                                <div className="h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-white" />
                                 </div>
                               </div>
-
-                              <button
-                                type="button"
-                                onClick={handleCopyAllDetails}
-                                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200/60 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition-colors hover:bg-emerald-50"
-                              >
-                                {copiedAll ? (
-                                  <>
-                                    <Check className="h-4 w-4" />
-                                    {lang === "en" ? "Copied!" : "ចម្លងរួច!"}
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="h-4 w-4" />
-                                    {lang === "en" ? "Copy Account Details" : "ចម្លងព័ត៌មានគណនី"}
-                                  </>
-                                )}
-                              </button>
                             </div>
-                          )}
+                          </div>
 
                           <div>
                             <label className="block text-xs font-medium text-slate-600">
@@ -649,7 +600,10 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                     <button
                       onClick={downloadInvoice}
                       disabled={isDownloading}
-                      className="mt-6 flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-200/50 transition-colors hover:bg-emerald-400 disabled:opacity-50"
+                      className={cn(
+                        "mt-6 flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-200/50 transition-colors hover:bg-emerald-400 disabled:opacity-50",
+                        lang === "km" && "khmer-font"
+                      )}
                     >
                       {isDownloading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -665,7 +619,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                       className="fixed left-[-9999px] top-0 bg-white" 
                       style={{ width: '210mm', position: 'absolute', left: '-9999px', top: 0, zIndex: -1 }}
                     >
-                      <div className="p-8">
+                      <div className="p-8" style={{ fontFamily: 'Arial, sans-serif' }}>
                         {/* Top Decorative Bar */}
                         <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400 rounded-full mb-6" />
 
@@ -676,7 +630,12 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                               <img src={logo} alt="Logo" className="h-full w-full object-cover" />
                             </div>
                             <div>
-                              <h1 className="text-3xl font-extrabold text-emerald-600 tracking-tight">{t.invoice}</h1>
+                              <h1 className={cn(
+                                "text-3xl mb-2 font-extrabold text-emerald-600 tracking-tight",
+                                lang === "km" && "khmer-font"
+                              )}>
+                                {t.invoice}
+                              </h1>
                               <p className="text-sm text-slate-400 font-medium">#{orderId}</p>
                             </div>
                           </div>
@@ -699,7 +658,12 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                               </div>
-                              <h3 className="text-sm font-bold text-slate-700">{t.customerDetails}</h3>
+                              <h3 className={cn(
+                                "text-sm font-bold text-slate-700",
+                                lang === "km" && "khmer-font"
+                              )}>
+                                {t.customerDetails}
+                              </h3>
                             </div>
                             <div className="space-y-1.5 text-sm">
                               <div className="flex items-center gap-2">
@@ -724,23 +688,22 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                 </svg>
                               </div>
-                              <h3 className="text-sm font-bold text-slate-700">{t.paymentDetails}</h3>
+                              <h3 className={cn(
+                                "text-sm font-bold text-slate-700",
+                                lang === "km" && "khmer-font"
+                              )}>
+                                {t.paymentDetails}
+                              </h3>
                             </div>
                             <div className="space-y-1.5 text-sm">
                               <div className="flex items-center gap-2">
                                 <span className="text-slate-400 text-xs font-medium w-14">Method</span>
-                                <span className="text-slate-800">: {formData.paymentMethod === "bank" ? "ABA Bank Transfer" : "Cash on Delivery"}</span>
+                                <span className="text-slate-800">: Bank Transfer</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="text-slate-400 text-xs font-medium w-14">Status</span>
-                                <span className="text-emerald-600 font-medium">: ● Pending</span>
+                                <span className="text-emerald-600 font-medium">: ● Paid</span>
                               </div>
-                              {formData.paymentMethod === "bank" && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-slate-400 text-xs font-medium w-14">Account</span>
-                                  <span className="text-slate-800 font-mono">: {bankAccount.accountNumber}</span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -753,7 +716,12 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                               </svg>
                             </div>
-                            <h3 className="text-sm font-bold text-slate-700">{t.orderDetails}</h3>
+                            <h3 className={cn(
+                              "text-sm font-bold text-slate-700",
+                              lang === "km" && "khmer-font"
+                            )}>
+                              {t.orderDetails}
+                            </h3>
                             <span className="ml-auto text-xs text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full">
                               {orderItems.length} {t.items}
                             </span>
@@ -764,10 +732,30 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                               <table className="w-full border-collapse text-sm">
                                 <thead>
                                   <tr className="bg-gradient-to-r from-emerald-50 to-teal-50/50 border-b-2 border-emerald-200/60">
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t.item}</th>
-                                    <th className="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">{t.qty}</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">{t.price}</th>
-                                    <th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">{t.subtotal}</th>
+                                    <th className={cn(
+                                      "px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider",
+                                      lang === "km" && "khmer-font"
+                                    )}>
+                                      {t.item}
+                                    </th>
+                                    <th className={cn(
+                                      "px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider",
+                                      lang === "km" && "khmer-font"
+                                    )}>
+                                      {t.qty}
+                                    </th>
+                                    <th className={cn(
+                                      "px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider",
+                                      lang === "km" && "khmer-font"
+                                    )}>
+                                      {t.price}
+                                    </th>
+                                    <th className={cn(
+                                      "px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider",
+                                      lang === "km" && "khmer-font"
+                                    )}>
+                                      {t.subtotal}
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -779,20 +767,32 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                                         index % 2 === 0 ? "bg-white" : "bg-emerald-50/20"
                                       )}
                                     >
-                                      <td className="px-4 py-3 text-slate-800 font-medium">{item.product.name[lang]}</td>
+                                      <td className={cn(
+                                        "px-4 py-3 text-slate-800 font-medium",
+                                        lang === "km" && "khmer-font"
+                                      )}>
+                                        {item.product.name[lang]}
+                                      </td>
                                       <td className="px-4 py-3 text-center">
                                         <span className="inline-flex items-center justify-center bg-emerald-100 text-emerald-700 font-bold text-xs w-6 h-6 rounded-full">
                                           {item.quantity}
                                         </span>
                                       </td>
-                                      <td className="px-4 py-3 text-right text-slate-600">{formatPrice(item.product.price, lang)}</td>
-                                      <td className="px-4 py-3 text-right font-semibold text-slate-800">{formatPrice(item.product.price * item.quantity, lang)}</td>
+                                      <td className="px-4 py-3 text-right text-slate-600">
+                                        {formatPrice(item.product.price, lang)}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                                        {formatPrice(item.product.price * item.quantity, lang)}
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
                                 <tfoot>
                                   <tr className="bg-gradient-to-r from-emerald-50/80 to-teal-50/80 border-t-2 border-emerald-200">
-                                    <td colSpan={3} className="px-4 py-4 text-right font-bold text-slate-800 text-base">
+                                    <td colSpan={3} className={cn(
+                                      "px-4 py-4 text-right font-bold text-slate-800 text-base",
+                                      lang === "km" && "khmer-font"
+                                    )}>
                                       {t.total}
                                     </td>
                                     <td className="px-4 py-4 text-right font-extrabold text-emerald-600 text-lg">
@@ -817,8 +817,18 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                               <div>
-                                <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Notes</h3>
-                                <p className="text-sm text-slate-600 mt-0.5">{formData.notes}</p>
+                                <h3 className={cn(
+                                  "text-xs font-bold text-amber-700 uppercase tracking-wider",
+                                  lang === "km" && "khmer-font"
+                                )}>
+                                  Notes
+                                </h3>
+                                <p className={cn(
+                                  "text-sm text-slate-600 mt-0.5",
+                                  lang === "km" && "khmer-font"
+                                )}>
+                                  {formData.notes}
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -829,10 +839,18 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                           <div className="text-center">
                             <div className="flex items-center justify-center gap-2 mb-2">
                               <span className="h-0.5 w-8 bg-emerald-200" />
-                              <span className="text-sm font-bold text-emerald-600">{t.thankYou}</span>
+                              <span className={cn(
+                                "text-sm font-bold text-emerald-600",
+                                lang === "km" && "khmer-font"
+                              )}>
+                                {t.thankYou}
+                              </span>
                               <span className="h-0.5 w-8 bg-emerald-200" />
                             </div>
-                            <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
+                            <p className={cn(
+                              "text-xs text-slate-500 max-w-lg mx-auto leading-relaxed",
+                              lang === "km" && "khmer-font"
+                            )}>
                               {t.formalThankYou}
                             </p>
                             <div className="mt-3 flex items-center justify-center gap-4 text-[10px] text-slate-400">
@@ -855,7 +873,10 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
 
                     <button
                       onClick={handleContinueShopping}
-                      className="mt-6 rounded-xl bg-emerald-500 px-8 py-3 text-sm font-bold text-white shadow-md shadow-emerald-200/50 transition-colors hover:bg-emerald-400"
+                      className={cn(
+                        "mt-6 rounded-xl bg-emerald-500 px-8 py-3 text-sm font-bold text-white shadow-md shadow-emerald-200/50 transition-colors hover:bg-emerald-400",
+                        lang === "km" && "khmer-font"
+                      )}
                     >
                       {t.continueShopping}
                     </button>
@@ -871,3 +892,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
 };
 
 export default Checkout;
+
+function setCopiedAll(_arg0: boolean) {
+  throw new Error("Function not implemented.");
+}
