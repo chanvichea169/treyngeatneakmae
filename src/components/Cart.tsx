@@ -91,7 +91,7 @@ const Cart = ({
   const t = texts[lang];
 
   // Per unit label
-  const perUnit = lang === "en" ? "/ kg" : "/ គីឡូ";
+  const perUnit = lang === "en" ? "/ 0.5kg" : "/ កន្លះគីឡូ";
 
   return (
     <AnimatePresence>
