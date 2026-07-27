@@ -75,7 +75,7 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
   // Translations with proper Khmer font
   const translations = {
     en: {
-      perKg: "/ kg",
+      perKg: "/ 0.5kg",
       inStock: "In Stock",
       add: "Add",
       added: "Added!",
@@ -83,7 +83,7 @@ const ProductCard = ({ product, lang, onAddToCart }: ProductCardProps) => {
       quickView: "Quick View",
     },
     km: {
-      perKg: "/ គីឡូ",
+      perKg: "/ កន្លះគីឡូ",
       inStock: "មានស្តុក",
       add: "បន្ថែម",
       added: "បានបន្ថែម!",

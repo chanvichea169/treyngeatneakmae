@@ -102,7 +102,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
   const orderDate = new Date().toLocaleString();
 
   // Per unit label
-  const perUnit = lang === "en" ? "/ kg" : "/ គីឡូ";
+  const perUnit = lang === "en" ? "/ 0.5kg" : "/ កន្លះគីឡូ";
 
   const texts = {
     en: {
@@ -126,7 +126,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       compatibleBanks: "Scan with ABA, ACLEDA, Wing, Bakong, or any banking app",
       back: "Back",
       customerName: "Full Name",
-      phone: "+855969757940",
+      phone: "Phone Number",
       address: "Delivery Address",
       personalInfo: "Personal Information",
       required: "Required",
@@ -151,7 +151,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       orderSummary: "សង្ខេបការបញ្ជាទិញ",
       items: "មុខ",
       total: "សរុប",
-      notes: "កំណត់ចំណាំ (ស្រេចចិត្ត)",
+      notes: "កំណត់ចំណាំបញ្ជាទិញ (បើមាន)",
       placeOrder: "បញ្ជាទិញ",
       processing: "កំពុងដំណើរការ...",
       orderPlaced: "បញ្ជាទិញជោគជ័យ!",
@@ -167,7 +167,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
       compatibleBanks: "ស្កេនជាមួយ ABA, ACLEDA, Wing, Bakong, ឬកម្មវិធីធនាគារណាមួយ",
       back: "ត្រឡប់ក្រោយ",
       customerName: "ឈ្មោះពេញ",
-      phone: "+855969757940",
+      phone: "លេខទូរសព្ទ",
       address: "អាសយដ្ឋានទទួលទំនិញ",
       personalInfo: "ព័ត៌មានផ្ទាល់ខ្លួន",
       required: "ត្រូវការ",
@@ -420,7 +420,9 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
 
                         <div className="mt-4 rounded-xl bg-emerald-50/50 p-4">
                           <div className="flex justify-between text-base font-bold">
-                            <span className="text-slate-800">{t.total}</span>
+                            <span className={cn("text-slate-800", lang === "km" && "khmer-font")}>
+                              {t.total}
+                            </span>
                             <span className="text-emerald-600">
                               {formatPrice(calculateTotal(items), lang)}
                             </span>
@@ -437,7 +439,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                         </h3>
                         <div className="space-y-3">
                           <div>
-                            <label className="block text-xs font-medium text-slate-600">
+                            <label className={cn("block text-xs font-medium text-slate-600", lang === "km" && "khmer-font")}>
                               {t.customerName} <span className="text-red-500">*</span>
                             </label>
                             <div className="relative mt-1">
@@ -454,7 +456,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-slate-600">
+                            <label className={cn("block text-xs font-medium text-slate-600", lang === "km" && "khmer-font")}>
                               {t.phone} <span className="text-red-500">*</span>
                             </label>
                             <div className="relative mt-1">
@@ -471,7 +473,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                             </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-slate-600">
+                            <label className={cn("block text-xs font-medium text-slate-600", lang === "km" && "khmer-font")}>
                               {t.address} <span className="text-red-500">*</span>
                             </label>
                             <div className="relative mt-1">
@@ -528,7 +530,7 @@ const Checkout = ({ isOpen, onClose, items, onClearCart, lang }: CheckoutProps) 
                           </div>
 
                           <div>
-                            <label className="block text-xs font-medium text-slate-600">
+                            <label className={cn("block text-xs font-medium text-slate-600", lang === "km" && "khmer-font")}>
                               {t.notes}
                             </label>
                             <div className="relative mt-1">

@@ -80,7 +80,7 @@ const Cart = ({
       emptySub: "ចាប់ផ្តើមបន្ថែមមុខម្ហូបឆ្ងាញ់ៗ!",
       total: "សរុប",
       checkout: "ទិញឥឡូវ",
-      clear: "ទទេកន្ត្រក",
+      clear: "លុបចេញពីកន្ត្រក",
       quantity: "ចំនួន",
       remove: "លុប",
       price: "តម្លៃ",
